@@ -62,5 +62,5 @@ test('Valid login redirects to dashboard', async ({ page }) => {
   await expect(page).toHaveURL(/dashboard/);
 
   // Check dashboard header is visible
-  await expect(page.locator('.oxd-topbar-header-breadcrumb')).toBeVisible();
+  await expect(page.locator('.oxd-topbar-header')).toBeVisible();
 });
