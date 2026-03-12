@@ -1,5 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
+
+// Test 1 - Check all login page elements are visible
 test('Login page elements should be visible', async ({ page }) => {
 
   // Load the Login page
@@ -7,17 +9,17 @@ test('Login page elements should be visible', async ({ page }) => {
   await page.waitForLoadState('networkidle');
   await page.waitForSelector('.orangehrm-login-form');
 
-  // logo
-  const logo = page.locator('.orangehrm-login-branding img');
+  // Logo
+  const logo = page.locator('.orangehrm-login-branding');
   await expect(logo).toBeVisible();
 
   // Login title
-  const loginTitle = page.locator('h5.orangehrm-login-title');
+  const loginTitle = page.locator('h5:has-text("Login")');
   await expect(loginTitle).toBeVisible();
   await expect(loginTitle).toHaveText('Login');
 
-  // Username text
-  const usernameLabel = page.locator('label.oxd-label', { hasText: 'Username' });
+  // Username label
+  const usernameLabel = page.locator(':text-is("Username")');
   await expect(usernameLabel).toBeVisible();
 
   // Username input field
@@ -25,8 +27,8 @@ test('Login page elements should be visible', async ({ page }) => {
   await expect(usernameInput).toBeVisible();
   await expect(usernameInput).toHaveAttribute('placeholder', 'Username');
 
-  // Password text
-  const passwordLabel = page.locator('label.oxd-label', { hasText: 'Password' });
+  // Password label
+  const passwordLabel = page.locator(':text-is("Password")');
   await expect(passwordLabel).toBeVisible();
 
   // Password input field
@@ -35,12 +37,30 @@ test('Login page elements should be visible', async ({ page }) => {
   await expect(passwordInput).toHaveAttribute('placeholder', 'Password');
 
   // Login button
-  const loginButton = page.locator('button.orangehrm-login-button');
+  const loginButton = page.locator("button[type='submit']");
   await expect(loginButton).toBeVisible();
   await expect(loginButton).toContainText('Login');
 
   // Forgot password link
-  const forgotPasswordLink = page.locator('.orangehrm-login-forgot-header');
+  const forgotPasswordLink = page.locator(':text-is("Forgot your password?")');
   await expect(forgotPasswordLink).toBeVisible();
   await expect(forgotPasswordLink).toContainText('Forgot your password?');
+});
+
+
+// Test 2 - Login with valid username and password goes to dashboard
+test('Valid login redirects to dashboard', async ({ page }) => {
+  await page.goto('https://opensource-demo.orangehrmlive.com/web/index.php/auth/login');
+  await page.waitForSelector('input[name="username"]');
+
+  //  Valid username and password
+  await page.fill('input[name="username"]', 'Admin');
+  await page.fill('input[name="password"]', 'admin123');
+  await page.click('button[type="submit"]');
+
+  // Check URL changed to dashboard
+  await expect(page).toHaveURL(/dashboard/);
+
+  // Check dashboard header is visible
+  await expect(page.locator('.oxd-topbar-header-breadcrumb')).toBeVisible();
 });
