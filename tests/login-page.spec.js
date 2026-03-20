@@ -59,8 +59,44 @@ test('Valid login redirects to dashboard', async ({ page }) => {
   await page.click('button[type="submit"]');
 
   // Check URL changed to dashboard
-  await expect(page).toHaveURL(/dashboard/);
+  await expect(page).toHaveURL(/dashboard/);;
 
   // Check dashboard header is visible
   await expect(page.locator('.oxd-topbar-header')).toBeVisible();
+  
+
+});
+
+
+// Test 3 - Verify My Info sidebar tab and Personal Details form
+test('My Info tab opens Personal Details form', async ({ page }) => {
+  await page.goto('https://opensource-demo.orangehrmlive.com/web/index.php/auth/login');
+  await page.waitForSelector('input[name="username"]');
+
+  // Login with valid credentials
+  await page.fill('input[name="username"]', 'Admin');
+  await page.fill('input[name="password"]', 'admin123');
+  await page.click('button[type="submit"]');
+
+  // Verify we are on dashboard
+  await expect(page).toHaveURL(/dashboard/);
+
+  // Verify left sidebar "My Info" tab is visible and click it
+  const myInfoTab = page.locator('span').filter({ hasText: 'My Info' });
+  await expect(myInfoTab).toBeVisible();
+  await myInfoTab.click();
+
+  // Verify URL navigates to Personal Details page
+  await expect(page).toHaveURL(/\/pim\/viewPersonalDetails\/empNumber\/\d+$/);
+
+  // Verify Personal Details form heading and key fields
+  await expect(page.locator('a').filter({ hasText: 'Personal Details' })).toBeVisible();
+
+  const fullNameInput = page.locator(':text("Employee Full Name")');
+  const employeeIdInput = page.locator(':text-is("Employee Id")');
+  const otherIdInput = page.locator(':text-is("Other Id")');
+
+  await expect(fullNameInput).toBeVisible();
+  await expect(employeeIdInput).toBeVisible();
+  await expect(otherIdInput).toBeVisible();
 });
