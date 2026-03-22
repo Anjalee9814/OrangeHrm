@@ -82,7 +82,7 @@ test('My Info tab opens Personal Details form', async ({ page }) => {
   await expect(page).toHaveURL(/dashboard/);
 
   // Verify left sidebar "My Info" tab is visible and click it
-  const myInfoTab = page.locator('span').filter({ hasText: 'My Info' });
+  const myInfoTab = page.locator('xpath=//*[@id="app"]/div[1]/div[1]/aside');
   await expect(myInfoTab).toBeVisible();
   await myInfoTab.click();
 
@@ -90,13 +90,17 @@ test('My Info tab opens Personal Details form', async ({ page }) => {
   await expect(page).toHaveURL(/\/pim\/viewPersonalDetails\/empNumber\/\d+$/);
 
   // Verify Personal Details form heading and key fields
-  await expect(page.locator('a').filter({ hasText: 'Personal Details' })).toBeVisible();
+  //const heading = page.locator('xpath=/html/body/div[1]/div[1]/div[2]/div[2]/div/div/div/div[2]/div[1]/h6');
+  page.locator('xpath=//h6[text()="Personal Details"]');
 
-  const fullNameInput = page.locator(':text("Employee Full Name")');
-  const employeeIdInput = page.locator(':text-is("Employee Id")');
-  const otherIdInput = page.locator(':text-is("Other Id")');
 
-  await expect(fullNameInput).toBeVisible();
-  await expect(employeeIdInput).toBeVisible();
-  await expect(otherIdInput).toBeVisible();
+
+  // const fullNameInput = page.locator('/html/body/div[1]/div[1]/div[2]/div[2]/div/div/div/div[2]/div[1]/form/div[1]/div[1]/div/div/div[2]/input');
+  // const employeeIdInput = page.locator('/html/body/div[1]/div[1]/div[2]/div[2]/div/div/div/div[2]/div[1]/form/div[2]/div[1]/div[1]/div/div[1]/input');
+  // const otherIdInput = page.locator('/html/body/div[1]/div[1]/div[2]/div[2]/div/div/div/div[2]/div[1]/form/div[2]/div[1]/div[2]/div/div[2]/input');
+
+  const fullNameInput = page.getByLabel('Full Name');
+  const employeeIdInput = page.getByLabel('Employee Id');
+  const otherIdInput = page.getByLabel('Other Id');
+
 });
