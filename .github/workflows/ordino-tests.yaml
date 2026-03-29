@@ -1,0 +1,89 @@
+name: Ordino Playwright Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ORDINO-AI-LLC/github-action@27
+        with:
+          test-framework: 'playwright'
+          total-shards: '2'
+          shard-index: '${{ matrix.shard }}'
+          skip-upload: 'true'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.shard }}
+          path: ordino-report/
+
+  upload-report:
+    needs: run-tests
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: playwright-report-*
+          path: all-reports/
+      - name: Get OIDC token (for presigned upload)
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('ordino-ci-upload');
+            core.setOutput('token', token);
+      - name: Presigned upload or legacy upload
+        env:
+          ORDINO_URL: "https://portal.staging.ordino.ai"
+          REPO_URL: ${{ github.repository }}
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+          PROJECT_ID: ${{ vars.PROJECT_ID }}
+        run: |
+          set -e
+          cd all-reports && zip -r ordino-report.zip . -x "*.zip" 2>/dev/null || true
+          cd .. && ZIP_PATH="all-reports/ordino-report.zip"
+          if [ ! -f "$ZIP_PATH" ]; then
+            echo "No report files to zip, will use legacy upload"
+            echo "PRESIGNED_SKIP=1" >> $GITHUB_ENV
+            exit 0
+          fi
+          BASE="${ORDINO_URL%/}"
+          PAYLOAD=$(jq -n \
+            --arg oidc "$OIDC_TOKEN" \
+            --arg repo "$REPO_URL" \
+            --arg artifact "ordino-report.zip" \
+            --arg ct "application/zip" \
+            --arg pid "${PROJECT_ID}" \
+            '{oidc_token: $oidc, repo_url: $repo, artifact_name: $artifact, content_type: $ct, project_id: $pid}')
+          RESP=$(curl -sS -w "\n%{http_code}" -X POST "${BASE}/organization/v1/upload/github_actions" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+          HTTP_BODY=$(echo "$RESP" | head -n -1)
+          HTTP_CODE=$(echo "$RESP" | tail -n1)
+          UPLOAD_URL=$(echo "$HTTP_BODY" | jq -r '.data.upload_url // empty')
+          if [ "$HTTP_CODE" = "200" ] && [ -n "$UPLOAD_URL" ] && [ "$UPLOAD_URL" != "null" ]; then
+            curl -sS -X PUT -T "$ZIP_PATH" -H "Content-Type: application/zip" "$UPLOAD_URL"
+            echo "Uploaded test results zip via presigned URL"
+          else
+            echo "Presigned upload not available (HTTP $HTTP_CODE), will use legacy upload step"
+            echo "PRESIGNED_SKIP=1" >> $GITHUB_ENV
+          fi
+      - name: Legacy merge-and-upload (if presigned was skipped)
+        if: env.PRESIGNED_SKIP == '1'
+        uses: ORDINO-AI-LLC/github-action@27
+        with:
+          test-framework: 'playwright'
+          action-mode: 'merge-and-upload'
